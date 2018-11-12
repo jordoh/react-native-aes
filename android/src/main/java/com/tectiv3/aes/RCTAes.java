@@ -24,10 +24,9 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.Mac;
 
-import org.spongycastle.crypto.digests.SHA512Digest;
+import org.spongycastle.crypto.digests.SHA256Digest;
 import org.spongycastle.crypto.generators.PKCS5S2ParametersGenerator;
 import org.spongycastle.crypto.params.KeyParameter;
-import org.spongycastle.util.encoders.Hex;
 
 import android.util.Base64;
 
@@ -138,11 +137,11 @@ public class RCTAes extends ReactContextBaseJavaModule {
     @ReactMethod
     public void randomKey(Integer length, Promise promise) {
         try {
-            byte[] key = new byte[length];
+            byte[] keyData = new byte[length];
             SecureRandom rand = new SecureRandom();
-            rand.nextBytes(key);
-            String keyHex = bytesToHex(key);
-            promise.resolve(keyHex);
+            rand.nextBytes(keyData);
+            String key = Base64.encodeToString(keyData, Base64.NO_WRAP);
+            promise.resolve(key);
         } catch (Exception e) {
             promise.reject("-1", e.getMessage());
         }
@@ -152,64 +151,53 @@ public class RCTAes extends ReactContextBaseJavaModule {
         MessageDigest md = MessageDigest.getInstance(algorithm);
         md.update(data.getBytes());
         byte[] digest = md.digest();
-        return bytesToHex(digest);
-    }
-
-    public static String bytesToHex(byte[] bytes) {
-        final char[] hexArray = "0123456789abcdef".toCharArray();
-        char[] hexChars = new char[bytes.length * 2];
-        for ( int j = 0; j < bytes.length; j++ ) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = hexArray[v >>> 4];
-            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-        }
-        return new String(hexChars);
+        return Base64.encodeToString(digest, Base64.NO_WRAP);
     }
 
     private static String pbkdf2(String pwd, String salt, Integer cost, Integer length)
     throws NoSuchAlgorithmException, InvalidKeySpecException
     {
-        PKCS5S2ParametersGenerator gen = new PKCS5S2ParametersGenerator(new SHA512Digest());
-        gen.init(pwd.getBytes(StandardCharsets.UTF_8), salt.getBytes(StandardCharsets.UTF_8), cost);
+        PKCS5S2ParametersGenerator gen = new PKCS5S2ParametersGenerator(new SHA256Digest());
+        gen.init(pwd.getBytes(StandardCharsets.UTF_8), Base64.decode(salt, Base64.NO_WRAP), cost);
         byte[] key = ((KeyParameter) gen.generateDerivedParameters(length)).getKey();
-        return bytesToHex(key);
+        return Base64.encodeToString(key, Base64.NO_WRAP);
     }
 
     private static String hmac256(String text, String key) throws NoSuchAlgorithmException, InvalidKeyException  {
         byte[] contentData = text.getBytes(StandardCharsets.UTF_8);
-        byte[] akHexData = Hex.decode(key);
+        byte[] keyData = Base64.decode(key, Base64.NO_WRAP);
         Mac sha256_HMAC = Mac.getInstance(HMAC_SHA_256);
-        SecretKey secret_key = new SecretKeySpec(akHexData, HMAC_SHA_256);
+        SecretKey secret_key = new SecretKeySpec(keyData, HMAC_SHA_256);
         sha256_HMAC.init(secret_key);
-        return bytesToHex(sha256_HMAC.doFinal(contentData));
+        return Base64.encodeToString(sha256_HMAC.doFinal(contentData), Base64.NO_WRAP);
     }
 
     final static IvParameterSpec emptyIvSpec = new IvParameterSpec(new byte[] {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
 
-    private static String encrypt(String text, String hexKey, String hexIv) throws Exception {
+    private static String encrypt(String text, String base64Key, String base64IV) throws Exception {
         if (text == null || text.length() == 0) {
             return null;
         }
 
-        byte[] key = Hex.decode(hexKey);
+        byte[] key = Base64.decode(base64Key, Base64.NO_WRAP);
         SecretKey secretKey = new SecretKeySpec(key, KEY_ALGORITHM);
 
         Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey, hexIv == null ? emptyIvSpec : new IvParameterSpec(Hex.decode(hexIv)));
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, base64IV == null ? emptyIvSpec : new IvParameterSpec(Base64.decode(base64IV, Base64.NO_WRAP)));
         byte[] encrypted = cipher.doFinal(text.getBytes("UTF-8"));
         return Base64.encodeToString(encrypted, Base64.NO_WRAP);
     }
 
-    private static String decrypt(String ciphertext, String hexKey, String hexIv) throws Exception {
+    private static String decrypt(String ciphertext, String base64Key, String base64IV) throws Exception {
         if(ciphertext == null || ciphertext.length() == 0) {
             return null;
         }
 
-        byte[] key = Hex.decode(hexKey);
+        byte[] key = Base64.decode(base64Key, Base64.NO_WRAP);
         SecretKey secretKey = new SecretKeySpec(key, KEY_ALGORITHM);
 
         Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
-        cipher.init(Cipher.DECRYPT_MODE, secretKey, hexIv == null ? emptyIvSpec : new IvParameterSpec(Hex.decode(hexIv)));
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, base64IV == null ? emptyIvSpec : new IvParameterSpec(Base64.decode(base64IV, Base64.NO_WRAP)));
         byte[] decrypted = cipher.doFinal(Base64.decode(ciphertext, Base64.NO_WRAP));
         return new String(decrypted, "UTF-8");
     }

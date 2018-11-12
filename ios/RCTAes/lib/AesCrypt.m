@@ -13,32 +13,12 @@
 
 @implementation AesCrypt
 
-+ (NSString *) toHex:(NSData *)nsdata {
-    NSString * hexStr = [NSString stringWithFormat:@"%@", nsdata];
-    for(NSString * toRemove in [NSArray arrayWithObjects:@"<", @">", @" ", nil])
-        hexStr = [hexStr stringByReplacingOccurrencesOfString:toRemove withString:@""];
-    return hexStr;
-}
-
-+ (NSData *) fromHex: (NSString *)string {
-    NSMutableData *data = [[NSMutableData alloc] init];
-    unsigned char whole_byte;
-    char byte_chars[3] = {'\0','\0','\0'};
-    for (int i = 0; i < ([string length] / 2); i++) {
-        byte_chars[0] = [string characterAtIndex:i*2];
-        byte_chars[1] = [string characterAtIndex:i*2+1];
-        whole_byte = strtol(byte_chars, NULL, 16);
-        [data appendBytes:&whole_byte length:1];
-    }
-    return data;
-}
-
 + (NSString *) pbkdf2:(NSString *)password salt: (NSString *)salt cost: (NSInteger)cost length: (NSInteger)length {
-    // Data of String to generate Hash key(hexa decimal string).
+    // Data of String to generate Hash key(base64 string).
     NSData *passwordData = [password dataUsingEncoding:NSUTF8StringEncoding];
-    NSData *saltData = [salt dataUsingEncoding:NSUTF8StringEncoding];
+    NSData *saltData = [[NSData alloc] initWithBase64EncodedString:salt options:0];
 
-    // Hash key (hexa decimal) string data length.
+    // Hash key data length.
     NSMutableData *hashKeyData = [NSMutableData dataWithLength:length/8];
 
     // Key Derivation using PBKDF2 algorithm.
@@ -48,7 +28,7 @@
                     passwordData.length,
                     saltData.bytes,
                     saltData.length,
-                    kCCPRFHmacAlgSHA512,
+                    kCCPRFHmacAlgSHA256,
                     cost,
                     hashKeyData.mutableBytes,
                     hashKeyData.length);
@@ -58,14 +38,12 @@
         return @"";
     }
 
-    return [self toHex:hashKeyData];
+    return [hashKeyData base64EncodedStringWithOptions:0];
 }
 
 + (NSData *) AES128CBC: (NSString *)operation data: (NSData *)data key: (NSString *)key iv: (NSString *)iv {
-    //convert hex string to hex data
-    NSData *keyData = [self fromHex:key];
-    NSData *ivData = [self fromHex:iv];
-    //    NSData *keyData = [key dataUsingEncoding:NSUTF8StringEncoding];
+    NSData *keyData = [[NSData alloc] initWithBase64EncodedString:key options:0];
+    NSData *ivData = [[NSData alloc] initWithBase64EncodedString:iv options:0];
     size_t numBytes = 0;
 
     NSMutableData * buffer = [[NSMutableData alloc] initWithLength:[data length] + kCCBlockSizeAES128];
@@ -99,19 +77,19 @@
 }
 
 + (NSString *) hmac256: (NSString *)input key: (NSString *)key {
-    NSData *keyData = [self fromHex:key];
+    NSData *keyData = [[NSData alloc] initWithBase64EncodedString:key options:0];
     NSData* inputData = [input dataUsingEncoding:NSUTF8StringEncoding];
     void* buffer = malloc(CC_SHA256_DIGEST_LENGTH);
     CCHmac(kCCHmacAlgSHA256, [keyData bytes], [keyData length], [inputData bytes], [inputData length], buffer);
     NSData *nsdata = [NSData dataWithBytesNoCopy:buffer length:CC_SHA256_DIGEST_LENGTH freeWhenDone:YES];
-    return [self toHex:nsdata];
+    return [nsdata base64EncodedStringWithOptions:0];
 }
 
 + (NSString *) sha1: (NSString *)input {
     NSData* inputData = [input dataUsingEncoding:NSUTF8StringEncoding];
     NSMutableData *result = [[NSMutableData alloc] initWithLength:CC_SHA1_DIGEST_LENGTH];
     CC_SHA1([inputData bytes], (CC_LONG)[inputData length], result.mutableBytes);
-    return [self toHex:result];
+    return [result base64EncodedStringWithOptions:0];
 }
 
 + (NSString *) sha256: (NSString *)input {
@@ -119,7 +97,7 @@
     unsigned char* buffer = malloc(CC_SHA256_DIGEST_LENGTH);
     CC_SHA256([inputData bytes], (CC_LONG)[inputData length], buffer);
     NSData *result = [NSData dataWithBytesNoCopy:buffer length:CC_SHA256_DIGEST_LENGTH freeWhenDone:YES];
-    return [self toHex:result];
+    return [result base64EncodedStringWithOptions:0];
 }
 
 + (NSString *) sha512: (NSString *)input {
@@ -127,7 +105,7 @@
     unsigned char* buffer = malloc(CC_SHA512_DIGEST_LENGTH);
     CC_SHA512([inputData bytes], (CC_LONG)[inputData length], buffer);
     NSData *result = [NSData dataWithBytesNoCopy:buffer length:CC_SHA512_DIGEST_LENGTH freeWhenDone:YES];
-    return [self toHex:result];
+    return [result base64EncodedStringWithOptions:0];
 }
 
 + (NSString *) randomUuid {
@@ -140,7 +118,7 @@
     if (result != noErr) {
         return nil;
     }
-    return [self toHex:data];
+    return [data base64EncodedStringWithOptions:0];
 }
 
 @end
