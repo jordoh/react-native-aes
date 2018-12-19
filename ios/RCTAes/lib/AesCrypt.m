@@ -71,6 +71,11 @@
     return [result base64EncodedStringWithOptions:0];
 }
 
++ (NSString *) encryptBase64: (NSString *)base64ClearText key: (NSString *)key iv: (NSString *)iv {
+    NSData *result = [self AES128CBC:@"encrypt" data:[[NSData alloc] initWithBase64EncodedString:base64ClearText options:0] key:key iv:iv];
+    return [result base64EncodedStringWithOptions:0];
+}
+
 + (NSString *) decrypt: (NSString *)cipherText key: (NSString *)key iv: (NSString *)iv {
     NSData *result = [self AES128CBC:@"decrypt" data:[[NSData alloc] initWithBase64EncodedString:cipherText options:0] key:key iv:iv];
     return [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding];
