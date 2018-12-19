@@ -65,6 +65,16 @@ public class RCTAes extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
+    public void encryptBase64(String dataBase64, String keyBase64, String ivBase64, Promise promise) {
+        try {
+            String result = encryptBase64(dataBase64, keyBase64, ivBase64);
+            promise.resolve(result);
+        } catch (Exception e) {
+            promise.reject("-1", e.getMessage());
+        }
+    }
+
+    @ReactMethod
     public void decrypt(String data, String pwd, String iv, Promise promise) {
         try {
             String strs = decrypt(data, pwd, iv);
@@ -185,6 +195,20 @@ public class RCTAes extends ReactContextBaseJavaModule {
         Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, base64IV == null ? emptyIvSpec : new IvParameterSpec(Base64.decode(base64IV, Base64.NO_WRAP)));
         byte[] encrypted = cipher.doFinal(text.getBytes("UTF-8"));
+        return Base64.encodeToString(encrypted, Base64.NO_WRAP);
+    }
+
+    private static String encryptBase64(String base64Text, String base64Key, String base64IV) throws Exception {
+        if (base64Text == null || base64Text.length() == 0) {
+            return null;
+        }
+
+        byte[] key = Base64.decode(base64Key, Base64.NO_WRAP);
+        SecretKey secretKey = new SecretKeySpec(key, KEY_ALGORITHM);
+
+        Cipher cipher = Cipher.getInstance(CIPHER_ALGORITHM);
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, base64IV == null ? emptyIvSpec : new IvParameterSpec(Base64.decode(base64IV, Base64.NO_WRAP)));
+        byte[] encrypted = cipher.doFinal(Base64.decode(base64Text, Base64.NO_WRAP));
         return Base64.encodeToString(encrypted, Base64.NO_WRAP);
     }
 
