@@ -16,7 +16,7 @@
 + (NSString *) pbkdf2:(NSString *)password salt: (NSString *)salt cost: (NSInteger)cost length: (NSInteger)length {
     // Data of String to generate Hash key(base64 string).
     NSData *passwordData = [password dataUsingEncoding:NSUTF8StringEncoding];
-    NSData *saltData = [[NSData alloc] initWithBase64EncodedString:salt options:0];
+    NSData *saltData = [[NSData alloc] initWithBase64EncodedString:salt options:NSDataBase64DecodingIgnoreUnknownCharacters];
 
     // Hash key data length.
     NSMutableData *hashKeyData = [NSMutableData dataWithLength:length/8];
@@ -42,8 +42,8 @@
 }
 
 + (NSData *) AES128CBC: (NSString *)operation data: (NSData *)data key: (NSString *)key iv: (NSString *)iv {
-    NSData *keyData = [[NSData alloc] initWithBase64EncodedString:key options:0];
-    NSData *ivData = [[NSData alloc] initWithBase64EncodedString:iv options:0];
+    NSData *keyData = [[NSData alloc] initWithBase64EncodedString:key options:NSDataBase64DecodingIgnoreUnknownCharacters];
+    NSData *ivData = [[NSData alloc] initWithBase64EncodedString:iv options:NSDataBase64DecodingIgnoreUnknownCharacters];
     size_t numBytes = 0;
 
     NSMutableData * buffer = [[NSMutableData alloc] initWithLength:[data length] + kCCBlockSizeAES128];
@@ -72,17 +72,17 @@
 }
 
 + (NSString *) encryptBase64: (NSString *)base64ClearText key: (NSString *)key iv: (NSString *)iv {
-    NSData *result = [self AES128CBC:@"encrypt" data:[[NSData alloc] initWithBase64EncodedString:base64ClearText options:0] key:key iv:iv];
+    NSData *result = [self AES128CBC:@"encrypt" data:[[NSData alloc] initWithBase64EncodedString:base64ClearText options:NSDataBase64DecodingIgnoreUnknownCharacters] key:key iv:iv];
     return [result base64EncodedStringWithOptions:0];
 }
 
 + (NSString *) decrypt: (NSString *)cipherText key: (NSString *)key iv: (NSString *)iv {
-    NSData *result = [self AES128CBC:@"decrypt" data:[[NSData alloc] initWithBase64EncodedString:cipherText options:0] key:key iv:iv];
+    NSData *result = [self AES128CBC:@"decrypt" data:[[NSData alloc] initWithBase64EncodedString:cipherText options:NSDataBase64DecodingIgnoreUnknownCharacters] key:key iv:iv];
     return [[NSString alloc] initWithData:result encoding:NSUTF8StringEncoding];
 }
 
 + (NSString *) hmac256: (NSString *)input key: (NSString *)key {
-    NSData *keyData = [[NSData alloc] initWithBase64EncodedString:key options:0];
+    NSData *keyData = [[NSData alloc] initWithBase64EncodedString:key options:NSDataBase64DecodingIgnoreUnknownCharacters];
     NSData* inputData = [input dataUsingEncoding:NSUTF8StringEncoding];
     void* buffer = malloc(CC_SHA256_DIGEST_LENGTH);
     CCHmac(kCCHmacAlgSHA256, [keyData bytes], [keyData length], [inputData bytes], [inputData length], buffer);
